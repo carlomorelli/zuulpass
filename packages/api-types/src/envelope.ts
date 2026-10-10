@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { kdfParamsSchema } from "./kdf.js";
 
 // AES-256-GCM ciphertext envelope (docs/architecture.md §3). Bytes are base64
 // on the wire; the worker treats the envelope as opaque.

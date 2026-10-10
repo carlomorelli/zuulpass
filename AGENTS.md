@@ -22,6 +22,8 @@ packages/
 ## Commands / conventions
 
 - Package manager: **pnpm workspaces**. TypeScript strict; project references.
+- Linting: **ESLint 10** flat config (`eslint.config.js`) + `typescript-eslint` + `eslint-config-prettier`; run with `pnpm lint`.
+- Formatting: **Prettier** (`pnpm format`); `docs/` and lockfile are prettier-ignored.
 - Testing: **Vitest**; worker tests via `@cloudflare/vitest-pool-workers`.
 - Deployment: **Wrangler** (local dev `wrangler dev`, D1 migrations, `secret put` for the server pepper).
 - CLI crypto and data models must not depend on UI libraries; `core` stays headless.
@@ -35,3 +37,17 @@ packages/
 3. Keep `docs/architecture.md` in sync with any design drift during implementation.
 4. Commit at each milestone. Do not commit secrets (the D1 pepper must go through
    `wrangler secrets`, never the repo).
+
+## Verification gate (IMPORTANT)
+
+After implementing or changing code, regularly run **all** of these, not just
+build/test. Expect a clean exit from every one before considering work done:
+
+- `pnpm lint` — ESLint (flat config, see above)
+- `pnpm typecheck` — TypeScript strict across all packages
+- `pnpm test` — Vitest (single workspace-wide run)
+- `pnpm format` — Prettier (writes; `docs/` and lockfile are ignored)
+
+Run Prettier over changed files before finishing a change so formatting stays
+canonical; if `pnpm lint` or `pnpm typecheck` reports issues, fix your code (or,
+only with reason, adjust the lint config) rather than silencing rules.

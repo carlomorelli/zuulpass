@@ -55,7 +55,11 @@ describe("kdf/params", () => {
 describe("login", () => {
   it("accepts ok state", () => {
     expect(
-      loginResponseSchema.parse({ status: "ok", token: "t".repeat(32), expiresAt: 1 }),
+      loginResponseSchema.parse({
+        status: "ok",
+        token: "t".repeat(32),
+        expiresAt: 1,
+      }),
     ).toEqual({ status: "ok", token: "t".repeat(32), expiresAt: 1 });
   });
 
@@ -66,7 +70,9 @@ describe("login", () => {
   });
 
   it("rejects unknown state and short tokens", () => {
-    expect(() => loginResponseSchema.parse({ status: "bogus", token: "x" })).toThrow();
+    expect(() =>
+      loginResponseSchema.parse({ status: "bogus", token: "x" }),
+    ).toThrow();
     expect(() =>
       loginResponseSchema.parse({ status: "ok", token: "short", expiresAt: 1 }),
     ).toThrow();
@@ -79,7 +85,9 @@ describe("register", () => {
   });
 
   it("rejects bad email", () => {
-    expect(() => registerRequestSchema.parse({ ...validRegister, email: "nope" })).toThrow();
+    expect(() =>
+      registerRequestSchema.parse({ ...validRegister, email: "nope" }),
+    ).toThrow();
   });
 
   it("rejects invalid envelope alg", () => {
@@ -92,7 +100,9 @@ describe("register", () => {
   });
 
   it("rejects invalid base64 in proof", () => {
-    expect(() => registerRequestSchema.parse({ ...validRegister, authHash: "%%%" })).toThrow();
+    expect(() =>
+      registerRequestSchema.parse({ ...validRegister, authHash: "%%%" }),
+    ).toThrow();
   });
 });
 
@@ -127,21 +137,39 @@ describe("vault", () => {
     };
     const out = vaultItemSchema.parse(item);
     expect(out.deleted).toBe(false);
-    expect(vaultPullResponseSchema.parse({ items: [out], cursor: 123 })).toEqual({
+    expect(
+      vaultPullResponseSchema.parse({ items: [out], cursor: 123 }),
+    ).toEqual({
       items: [{ ...item, deleted: false }],
       cursor: 123,
     });
   });
 
   it("accepts tombstones", () => {
-    const item = { id: "abc", revision: 4, updatedAt: 124, deleted: true, ciphertext: b64(64) };
+    const item = {
+      id: "abc",
+      revision: 4,
+      updatedAt: 124,
+      deleted: true,
+      ciphertext: b64(64),
+    };
     expect(vaultItemSchema.parse(item)).toEqual(item);
   });
 
   it("rejects bad revision and base64", () => {
-    expect(() => vaultPutRequestSchema.parse({ id: "a", baseRevision: -1, ciphertext: b64() })).toThrow();
     expect(() =>
-      vaultPutRequestSchema.parse({ id: "a", baseRevision: 0, ciphertext: "@@" }),
+      vaultPutRequestSchema.parse({
+        id: "a",
+        baseRevision: -1,
+        ciphertext: b64(),
+      }),
+    ).toThrow();
+    expect(() =>
+      vaultPutRequestSchema.parse({
+        id: "a",
+        baseRevision: 0,
+        ciphertext: "@@",
+      }),
     ).toThrow();
   });
 });

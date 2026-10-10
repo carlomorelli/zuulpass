@@ -10,5 +10,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@scure/base": "^2.4.0",
+    "@zuulpass/api-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5"
   }
 }

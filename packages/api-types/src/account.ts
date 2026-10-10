@@ -32,5 +32,7 @@ export const recoverRequestSchema = z.object({
 });
 
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
-export type ChangeMasterPasswordRequest = z.infer<typeof changeMasterPasswordRequestSchema>;
+export type ChangeMasterPasswordRequest = z.infer<
+  typeof changeMasterPasswordRequestSchema
+>;
 export type RecoverRequest = z.infer<typeof recoverRequestSchema>;
