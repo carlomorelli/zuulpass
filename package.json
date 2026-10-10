@@ -2,6 +2,7 @@
   "name": "zuulpass",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Zero-knowledge password manager: Cloudflare Worker backend + Node CLI",
   "packageManager": "pnpm@12.11.2",
   "engines": {
@@ -19,6 +20,6 @@
     "prettier": "^3.3.3",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.2"
+    "vitest": "^5.0.3"
   }
 }

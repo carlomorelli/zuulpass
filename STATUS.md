@@ -14,7 +14,7 @@ Node CLI client. Full design: [`docs/architecture.md`](docs/architecture.md).
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Scaffold monorepo (pnpm, base tsconfig, vitest) | **done** |
-| 2 | `api-types`: Zod schemas for endpoints + payloads | pending |
+| 2 | `api-types`: Zod schemas for endpoints + payloads | **done** |
 | 3 | `core` crypto: PBKDF2/HKDF/AES-GCM envelope, key hierarchy, recovery (+ test vectors) | pending |
 | 4 | `core`: config, local encrypted cache, sync engine, headless `VaultService` | pending |
 | 5 | `worker`: Hono routes, D1 schema + migrations, auth/sessions, vault CRUD, sync | pending |
@@ -23,7 +23,7 @@ Node CLI client. Full design: [`docs/architecture.md`](docs/architecture.md).
 
 ## Current phase
 
-Phase 2 — `api-types`: Zod schemas for every endpoint + payloads. **Not started.**
+Phase 3 — `core` crypto: PBKDF2/HKDF/AES-GCM envelope, key hierarchy, recovery. **Not started.**
 
 ## Completed so far
 
@@ -32,6 +32,9 @@ Phase 2 — `api-types`: Zod schemas for every endpoint + payloads. **Not starte
 - **Phase 1 done:** pnpm workspace scaffolded (`pnpm` 12.11.2, Node 24). Root configs: `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `vitest.config.ts`, `.gitignore`, `.npmrc`.
 - Packages created: `@zuulpass/core`, `@zuulpass/api-types` (zod dep), `@zuulpass/worker` (wrangler + workers-types dev deps), `@zuulpass/cli`.
 - `pnpm typecheck` passes (all 4 packages); `pnpm test` passes (1 smoke test); `pnpm --filter @zuulpass/cli start` runs via tsx.
+- **Phase 2 done:** `api-types` wire contract implemented and tested (18 tests):
+  - `kdf.ts` (versioned KDF params + `/params` response), `auth.ts` (login state machine), `envelope.ts` (AES-256-GCM envelope), `account.ts` (register / change-master-password / recover), `vault.ts` (item, pull, put, delete, cursor), `error.ts` (uniform error body).
+  - All parsed/inferred types re-exported from `src/index.ts`.
 
 ## Key conventions / locked decisions (short version)
 
@@ -47,8 +50,9 @@ Phase 2 — `api-types`: Zod schemas for every endpoint + payloads. **Not starte
 
 - **pnpm 12 build scripts:** dependency install scripts are blocked by default; allow-listed via `allowBuilds` in `pnpm-workspace.yaml` (`esbuild: true`, `workerd: true`, `sharp: false`). Add new entries there if future deps need install scripts.
 - **Vitest root:** `vitest.config.ts` pins `test.root` to the repo root with include `packages/**/*.test.ts`, so tests are discoverable regardless of the cwd a package runs from.
-- Vitest 2.1.x prints a harmless "CJS build of Vite's Node API is deprecated" warning — consider upgrading Vitest to v3 later.
-- Nothing committed for phase 1 yet (awaiting explicit commit instruction).
+- **Vitest upgraded to ^5.0.3** (was 2.1.9) — removes Vite's "CJS API deprecated" warning (Vite 6+/ESM). Root `package.json` now has `"type": "module"` (whole repo is ESM).
+- **TypeScript kept at 5.9.x** — decision tracker: TS 7.x is the new native/Go compiler port; not adopted for the MVP. Revisit later.
+- Nothing committed for phase 2 / tooling bumps yet (awaiting explicit commit instruction).
 
 ## Handoff instructions
 
