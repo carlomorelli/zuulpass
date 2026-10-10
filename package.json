@@ -1,0 +1,24 @@
+{
+  "name": "zuulpass",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-knowledge password manager: Cloudflare Worker backend + Node CLI",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "vitest run",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "prettier": "^3.3.3",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

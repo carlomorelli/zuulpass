@@ -1,0 +1,17 @@
+{
+  "name": "@zuulpass/api-types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ZuulPass wire contract: Zod schemas + inferred TS types shared by worker and clients",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

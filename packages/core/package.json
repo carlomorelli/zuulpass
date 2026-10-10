@@ -1,0 +1,14 @@
+{
+  "name": "@zuulpass/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ZuulPass shared logic: crypto, key hierarchy, sync engine, vault ops, config, local cache (no UI)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}
