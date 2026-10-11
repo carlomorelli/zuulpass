@@ -7,6 +7,7 @@ const proofSchema = z.string().base64();
 export const sessionTokenSchema = z.string().min(32).max(256);
 
 export const loginRequestSchema = z.object({
+  email: z.string().email(),
   authHash: proofSchema,
 });
 
@@ -31,4 +32,5 @@ export const loginResponseSchema = z.discriminatedUnion("status", [
 export type AuthProof = z.infer<typeof loginRequestSchema>["authHash"];
 export type SessionToken = z.infer<typeof sessionTokenSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
+export type LoginOk = z.infer<typeof loginOkSchema>;
 export type LoginResponse = z.infer<typeof loginResponseSchema>;

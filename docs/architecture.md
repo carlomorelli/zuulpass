@@ -73,6 +73,9 @@ vault_items(
 -- indexes: users(email), sessions(token_hash), vault_items(user_id, updated_at)
 ```
 
+> The login-session slice ships `users` + `sessions` tables; `vault_items` and its
+> index are created by the vault/sync migration (next phase).
+
 **Encrypted payload (decrypted view):**
 
 ```json
@@ -97,16 +100,23 @@ respect 100k rows-written/day and 50 queries per invocation.
 
 ```
 GET    /params?email=          -> { kdf, salt, params, version }        (pre-auth, decoy-safe)
-POST   /login   { authHash }   -> { status:"ok", token, expiresAt }
+POST   /login   { email, authHash } -> { status:"ok", token, expiresAt }
 POST   /refresh                -> { expiresAt }
 POST   /logout                 -> 204
 POST   /account/register       -> 201
+GET    /account/keys           -> { protectedUsk }                       (Bearer; wrapped USK for local unlock)
 POST   /account/change-master-password { newProtectedUSK, newAuthHash, newKdfParams }
 POST   /account/recover        { recoveryAuth, newProtectedUSK, newAuthHash, newKdfParams }
-GET    /vault?since=<ts>       -> { items:[...], cursor }
-POST   /vault/items            { id, baseRevision, ciphertext }         (LWW)
-DELETE /vault/items/:id        { baseRevision }                         (tombstone)
+GET    /vault?since=<ts>       -> { items:[...], cursor }                (deferred)
+POST   /vault/items            { id, baseRevision, ciphertext }         (LWW, deferred)
+DELETE /vault/items/:id        { baseRevision }                         (tombstone, deferred)
 ```
+
+> Design note (login-session slice): clients must fetch `protected_usk` to
+> unlock their local cache, so `GET /account/keys` was added to the original
+> list. `POST /login` carries `email` so the server can route the login
+> (`auth_verifier` lookup). Vault CRUD/sync endpoints are not implemented yet;
+> `add`/`ls` currently keep items in the local encrypted cache only.
 
 Implemented with **Hono**, **Zod** schemas in `api-types`, and **`hono/client`**
 for an end-to-end typed client.
@@ -124,7 +134,7 @@ for an end-to-end typed client.
 | File | Contents | Sensitivity |
 |---|---|---|
 | `config.json` | `{ serverUrl, email }` | low |
-| `params.json` | cached KDF params + salt (enables offline unlock) | **non-secret** |
+| `params.json` | cached KDF params + salt + `protected_usk` (enables offline unlock) | **non-secret** |
 | `cache.enc` | vault items, AES-GCM under USK | ciphertext |
 | `sync.json` | last-sync cursor | low |
 
@@ -275,6 +285,9 @@ sequenceDiagram
   W->>W: verify HMAC of pepper and authHash
   W->>D1: INSERT session with token_hash and TTL
   W-->>CLI: return ok status and token
+  CLI->>W: GET /account/keys Bearer token
+  W-->>CLI: return protected_usk
+  CLI->>CLI: unwrap USK, merge into cache.enc
   CLI->>W: GET /vault since cursor, Bearer token
   W->>D1: SELECT changed items
   W-->>CLI: return changed items and cursor

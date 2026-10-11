@@ -14,5 +14,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.3",
+    "@zuulpass/api-types": "workspace:*",
+    "@zuulpass/core": "workspace:*",
+    "commander": "^15.0.0"
   }
 }

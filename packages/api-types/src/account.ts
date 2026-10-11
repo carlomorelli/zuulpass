@@ -14,6 +14,12 @@ export const registerRequestSchema = z.object({
   recoveryAuth: z.string().base64(),
 });
 
+// GET /account/keys — authenticated; returns the wrapped USK so a fresh client
+// can unwrap it locally with the password-derived Stretched Key.
+export const accountKeysResponseSchema = z.object({
+  protectedUsk: envelopeSchema,
+});
+
 // POST /account/change-master-password — wraps the same USK under a new
 // master password; vault items are never re-encrypted.
 export const changeMasterPasswordRequestSchema = z.object({
@@ -32,6 +38,7 @@ export const recoverRequestSchema = z.object({
 });
 
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+export type AccountKeysResponse = z.infer<typeof accountKeysResponseSchema>;
 export type ChangeMasterPasswordRequest = z.infer<
   typeof changeMasterPasswordRequestSchema
 >;

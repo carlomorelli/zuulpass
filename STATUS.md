@@ -11,19 +11,25 @@ Node CLI client. Full design: [`docs/architecture.md`](docs/architecture.md).
 
 ## MVP build order (per `docs/architecture.md` §11)
 
-| #   | Phase                                                                                                          | Status   |
-| --- | -------------------------------------------------------------------------------------------------------------- | -------- |
-| 1   | Scaffold monorepo (pnpm, base tsconfig, vitest)                                                                | **done** |
-| 2   | `api-types`: Zod schemas for endpoints + payloads                                                              | **done** |
-| 3   | `core` crypto: PBKDF2/HKDF/AES-GCM envelope, key hierarchy, recovery (+ test vectors)                          | **done** |
-| 4   | `core`: config, local encrypted cache, sync engine, headless `VaultService`                                    | pending  |
-| 5   | `worker`: Hono routes, D1 schema + migrations, auth/sessions, vault CRUD, sync                                 | pending  |
-| 6   | `cli`: `init`, unlock/sync preamble, `get`/`ls`, `add`/`edit`/`rm`, `gen`, `change-master-password`, `recover` | pending  |
-| 7   | Integration tests (CLI <-> local Worker) + CI                                                                  | pending  |
+| #   | Phase                                                                                                          | Status      |
+| --- | -------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Scaffold monorepo (pnpm, base tsconfig, vitest)                                                                | **done**    |
+| 2   | `api-types`: Zod schemas for endpoints + payloads                                                              | **done**    |
+| 3   | `core` crypto: PBKDF2/HKDF/AES-GCM envelope, key hierarchy, recovery (+ test vectors)                          | **done**    |
+| 4   | `core`: config, local encrypted cache, sync engine, headless `VaultService`                                    | **partial** |
+| 5   | `worker`: Hono routes, D1 schema + migrations, auth/sessions, vault CRUD, sync                                 | **partial** |
+| 6   | `cli`: `init`, unlock/sync preamble, `get`/`ls`, `add`/`edit`/`rm`, `gen`, `change-master-password`, `recover` | **partial** |
+| 7   | Integration tests (CLI <-> local Worker) + CI                                                                  | pending     |
 
 ## Current phase
 
-Phase 3 — `core` crypto. **Done.** Next: Phase 4 — `core` config, local encrypted cache, sync engine, headless `VaultService`. **Not started.**
+Phase 3 — `core` crypto. **Done.** Login-session slice shipped (phases 4/5/6
+partial): a real register/login/session path against the Worker plus
+`zuulp init / add / ls` on a local USK-encrypted cache (`cache.enc`).
+
+**Next:** Worker vault CRUD + incremental sync (`/vault`, D1 `vault_items`),
+offline cache fallback, and the remaining CLI commands (`get`, `edit`, `rm`,
+`gen`, `change-master-password`, `recover`).
 
 ## Completed so far
 
@@ -43,6 +49,12 @@ Phase 3 — `core` crypto. **Done.** Next: Phase 4 — `core` config, local encr
   - `recovery.ts` — recovery key (32B) + base32 code (grouped uppercase), `deriveRecoveryWrapKey` (HKDF info `"recovery"`, salt = recovery_salt), `deriveRecoveryAuth` (HKDF info `"recovery-auth"` over the wrap key), `wrapUSKWithRecovery`/`unwrapUSKWithRecovery`.
   - Tests validate: PBKDF2 known-answer + node:crypto cross-check, RFC 5869 HKDF cases 1 & 4, AES-GCM known cross-check vs node `createCipheriv` + tamper/wrong-key/nonce guards, full key hierarchy + 600k production flow, recovery code round-trips + full recovery flow, and every produced envelope against `envelopeSchema`.
   - `core` deps: `@zuulpass/api-types` (`workspace:*`, type-only usage), `@scure/base` (base32). Test-only helpers in `packages/core/test/crypto-helpers.ts`.
+- **Login-session slice done (77 tests total; manual smoke-verified):**
+  - `api-types`: `loginRequestSchema` now requires `email` (was authHash-only — server could not route logins); added `accountKeysResponseSchema` for `GET /account/keys`.
+  - `worker`: Hono app (`hono` dep), `wrangler.toml` + D1 migration `0001_init.sql` (`users`, `sessions`), routes `GET /health`, `GET /params` (decoy-safe), `POST /account/register`, `POST /login`, `POST /logout`, `GET /account/keys`; SHA-256 token at rest + sliding/absolute session expiry; auth verifier = `HMAC-SHA256(PEPPER, authHash)`.
+  - `core`: `config.ts` (ZUULPASS_HOME; default `%APPDATA%\zuulpass` on Windows; `config.json` / `params.json`), `client.ts` (typed fetch API incl. `ApiError`), `cache.ts` (`cache.enc` AES-GCM under USK), `session.ts` (`unlock` preamble), `vault-item.ts` (decrypted payload model), `password-policy.ts` (zxcvbn >= 3 floor). New deps: `@zxcvbn-ts/{core,language-common,language-en}`.
+  - `cli`: commander + `@inquirer/prompts`; `zuulp init` (register + recovery code), `zuulp add`, `zuulp ls`; items stored locally, login/session real.
+  - Verified by hand: `zuulp init` -> register, recovery code printed; `zuulp add` -> login preamble + cache write; `zuulp ls` -> decrypts cache; D1 shows the row.
 
 ## Key conventions / locked decisions (short version)
 
@@ -61,10 +73,16 @@ Phase 3 — `core` crypto. **Done.** Next: Phase 4 — `core` config, local encr
 - **Vitest upgraded to ^5.0.3** (was 2.1.9) — removes Vite's "CJS API deprecated" warning (Vite 6+/ESM). Root `package.json` now has `"type": "module"` (whole repo is ESM).
 - **TypeScript kept at 5.9.x** — decision tracker: TS 7.x is the new native/Go compiler port; not adopted for the MVP. Revisit later.
 - **Linter added:** ESLint 10 (flat `eslint.config.js`) + `typescript-eslint` 8 + `eslint-config-prettier`. `pnpm lint` runs `eslint .`. Prettier ignores `docs/`, `dist`, lockfile via `.prettierignore`. All gates green: lint / typecheck / test.
-- **`@scure/base` base32 gotcha:** the padded `base32` codec *rejects* unpadded input on decode; use **`base32nopad`** for the recovery code (returns 52 chars / 32 bytes, decodes with or without the grouped separators). Recovery code is uppercase, grouped in 4s with `-`.
+- **`@scure/base` base32 gotcha:** the padded `base32` codec _rejects_ unpadded input on decode; use **`base32nopad`** for the recovery code (returns 52 chars / 32 bytes, decodes with or without the grouped separators). Recovery code is uppercase, grouped in 4s with `-`.
 - **No `Envelope` field for AAD:** `aesGcmEncrypt` currently binds no additional authenticated data (envelope schema has no AAD field). If per-item AAD is wanted later, extend the envelope schema first.
 - **`hkdf` info** takes `string | Uint8Array` so RFC 5869 vectors (arbitrary bytes) can be tested directly.
-- Nothing committed for phase 2/3 / tooling bumps yet (awaiting explicit commit instruction).
+- **Design drift (recorded, `docs/architecture.md` §6 updated):** `POST /login` carries `email`; added `GET /account/keys` (Bearer) returning `protectedUsk` — a fresh client needs the wrapped USK to unlock the local cache.
+- **Dev pepper:** `[vars] PEPPER` in `wrangler.toml` is dev-only. For any real deployment, remove it and use `wrangler secret put PEPPER`.
+- **Running the worker locally:** `wrangler d1 migrations apply zuulpass --local` once, then `wrangler dev` (port 8787). Local D1 state lives under `.wrangler/` (gitignored).
+- **Scripting the CLI:** `pnpm --filter @zuulpass/cli start -- <cmd>` forwards `--` literally (commander reads it as end-of-options). Use `pnpm --filter @zuulpass/cli exec tsx src/index.ts <cmd> ...` when passing flags from a script.
+- **`init` non-interactive:** with `--password-stdin` the recovery-code confirm is skipped (prints a warning instead).
+- **CLI non-interactive mode:** `--password-stdin` (or any piped/non-TTY stdin) disables all interactive prompts — required values (`--email` on `init`, `--name` on `add`) must be passed as flags and other fields default to `""`. Rationale: reading to EOF from an interactive console is unreliable on Windows PowerShell (PSReadLine binds Ctrl+Z to Undo, so there's no working EOF keystroke), and a consumed stdin used to crash `@inquirer/prompts` with "User force closed the prompt".
+- Committed `5388659 "Intermediate - working login prototype"` (login slice + `architecture.md` drift + stdin fix).
 
 ## Handoff instructions
 
