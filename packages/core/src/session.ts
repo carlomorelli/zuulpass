@@ -9,10 +9,12 @@ import {
 } from "./client.js";
 import { deriveKeys, unwrapUSK } from "./keys.js";
 
-// The hidden preamble every authenticated command runs (docs/architecture.md
-// §9, §15.2): fetch params -> derive keys -> login (ephemeral token) -> fetch
-// the wrapped USK -> unwrap it locally. The master password and USK never leave
-// the process.
+/**
+ * The hidden preamble every authenticated command runs (docs/architecture.md
+ * §9, §15.2): fetch params -> derive keys -> login (ephemeral token) -> fetch
+ * the wrapped USK -> unwrap it locally. The master password and USK never leave
+ * the process.
+ */
 export interface UnlockOptions {
   serverUrl: string;
   email: string;
@@ -20,6 +22,7 @@ export interface UnlockOptions {
   fetch?: typeof fetch;
 }
 
+/** Result of a successful unlock: ephemeral token plus the unwrapped USK. */
 export interface UnlockedSession {
   token: string;
   usk: Uint8Array;
@@ -29,6 +32,12 @@ export interface UnlockedSession {
   protectedUsk: Envelope;
 }
 
+/**
+ * Fetch KDF params, derive keys, log in, and unwrap the USK.
+ * @param options - Server URL, account email, and master password.
+ * @returns The ephemeral session token and unwrapped USK plus KDF metadata.
+ * @throws If the server rejects the login or the wrapped USK cannot be unwrapped.
+ */
 export async function unlock(options: UnlockOptions): Promise<UnlockedSession> {
   const client: ApiClient = createApiClient(
     options.serverUrl,

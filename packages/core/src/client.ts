@@ -10,12 +10,20 @@ import {
   type RegisterRequest,
 } from "@zuulpass/api-types";
 
-// Typed HTTP client for the worker API (docs/architecture.md §6). All responses
-// are validated against the shared `api-types` Zod schemas.
+/**
+ * Typed HTTP client for the worker API (docs/architecture.md §6). All responses
+ * are validated against the shared `api-types` Zod schemas.
+ */
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
 
+  /**
+   * Create an API error.
+   * @param code - Machine-readable error code from the response body.
+   * @param message - Human-readable error message.
+   * @param status - HTTP status code.
+   */
   constructor(code: string, message: string, status: number) {
     super(message);
     this.name = "ApiError";
@@ -24,11 +32,18 @@ export class ApiError extends Error {
   }
 }
 
+/** Minimal API client: a base URL plus a fetch implementation. */
 export interface ApiClient {
   serverUrl: string;
   fetch: typeof fetch;
 }
 
+/**
+ * Create an API client with a normalized (trailing-slash-free) base URL.
+ * @param serverUrl - The worker base URL.
+ * @param fetchImpl - Fetch implementation to use (defaults to global `fetch`).
+ * @returns A configured `ApiClient`.
+ */
 export function createApiClient(
   serverUrl: string,
   fetchImpl: typeof fetch = fetch,
@@ -64,6 +79,13 @@ function requestHeaders(
   return headers;
 }
 
+/**
+ * Fetch the account's KDF params (decoy params for unknown emails).
+ * @param client - The API client.
+ * @param email - The account email.
+ * @returns The versioned KDF params and recovery salt.
+ * @throws {ApiError} If the server responds with an error.
+ */
 export async function getParams(
   client: ApiClient,
   email: string,
@@ -77,6 +99,12 @@ export async function getParams(
   return paramsResponseSchema.parse(await res.json());
 }
 
+/**
+ * Register a new account.
+ * @param client - The API client.
+ * @param body - The registration payload.
+ * @throws {ApiError} If the server rejects the registration.
+ */
 export async function register(
   client: ApiClient,
   body: RegisterRequest,
@@ -90,6 +118,13 @@ export async function register(
   );
 }
 
+/**
+ * Log in and obtain an ephemeral session token.
+ * @param client - The API client.
+ * @param body - The login payload.
+ * @returns The discriminated login response.
+ * @throws {ApiError} If the credentials are rejected.
+ */
 export async function login(
   client: ApiClient,
   body: LoginRequest,
@@ -104,6 +139,12 @@ export async function login(
   return loginResponseSchema.parse(await res.json());
 }
 
+/**
+ * Log out and invalidate the current session token.
+ * @param client - The API client.
+ * @param token - The session token.
+ * @throws {ApiError} If the server rejects the request.
+ */
 export async function logout(client: ApiClient, token: string): Promise<void> {
   await ensureOk(
     await client.fetch(`${client.serverUrl}/logout`, {
@@ -113,6 +154,13 @@ export async function logout(client: ApiClient, token: string): Promise<void> {
   );
 }
 
+/**
+ * Fetch the wrapped USK for the authenticated account.
+ * @param client - The API client.
+ * @param token - The session token.
+ * @returns The wrapped USK envelope.
+ * @throws {ApiError} If the token is missing or invalid.
+ */
 export async function getAccountKeys(
   client: ApiClient,
   token: string,

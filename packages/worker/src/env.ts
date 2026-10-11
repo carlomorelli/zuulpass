@@ -1,11 +1,14 @@
-// Worker bindings (wrangler.toml).
+/** Worker bindings (wrangler.toml). */
 export interface Env {
   DB: D1Database;
-  // Server pepper: verifiers are stored as HMAC-SHA256(pepper, proof). Never
-  // derivable from the DB alone (docs/architecture.md §2, §4).
+  /**
+   * Server pepper: verifiers are stored as HMAC-SHA256(pepper, proof). Never
+   * derivable from the DB alone (docs/architecture.md §2, §4).
+   */
   PEPPER: string;
 }
 
+/** Per-request context variables set by `requireAuth`. */
 export interface Variables {
   userId: string;
   sessionId: string;

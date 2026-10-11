@@ -40,8 +40,10 @@ async function readJson(c: { req: { json: () => Promise<unknown> } }) {
 
 app.get("/health", (c) => c.json({ ok: true, service: "zuulpass" }));
 
-// GET /params?email= -> versioned KDF params. Decoy-safe: unknown emails get a
-// deterministic fake salt of the same shape (docs/architecture.md §4, §6).
+/**
+ * GET /params?email= -> versioned KDF params. Decoy-safe: unknown emails get a
+ * deterministic fake salt of the same shape (docs/architecture.md §4, §6).
+ */
 app.get("/params", async (c) => {
   const email = normalizeEmail(c.req.query("email") ?? "");
   if (!email) {
@@ -69,8 +71,10 @@ app.get("/params", async (c) => {
   });
 });
 
-// POST /account/register -> 201. Stores verifiers as HMAC(pepper, proof); the
-// worker never sees the master password or any unwrapped key.
+/**
+ * POST /account/register -> 201. Stores verifiers as HMAC(pepper, proof); the
+ * worker never sees the master password or any unwrapped key.
+ */
 app.post("/account/register", async (c) => {
   const parsed = registerRequestSchema.safeParse(await readJson(c));
   if (!parsed.success) {

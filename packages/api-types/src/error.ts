@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Uniform error body for all non-2xx responses.
+/** Uniform error body for all non-2xx responses. */
 export const errorResponseSchema = z.object({
   error: z.object({
     code: z.enum([
@@ -15,4 +15,5 @@ export const errorResponseSchema = z.object({
   }),
 });
 
+/** Parsed uniform error response. */
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;

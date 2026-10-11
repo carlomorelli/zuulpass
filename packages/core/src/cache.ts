@@ -6,18 +6,29 @@ import { CACHE_FILE } from "./config.js";
 import { aesGcmDecrypt, aesGcmEncrypt } from "./crypto.js";
 import type { LocalVaultItem } from "./vault-item.js";
 
-// Single USK-encrypted local cache file (docs/architecture.md §16).
+/** Single USK-encrypted local cache file (docs/architecture.md §16). */
 export const CACHE_VERSION = 1;
 
+/** In-memory view of the local cache file. */
 export interface CacheContents {
   version: number;
   items: LocalVaultItem[];
 }
 
+/**
+ * Create an empty cache at the current version.
+ * @returns An empty `CacheContents`.
+ */
 export function emptyCache(): CacheContents {
   return { version: CACHE_VERSION, items: [] };
 }
 
+/**
+ * Encrypt cache contents under the USK.
+ * @param usk - The User Symmetric Key.
+ * @param cache - The cache contents to encrypt.
+ * @returns The AES-GCM envelope to persist.
+ */
 export function encryptCache(
   usk: Uint8Array,
   cache: CacheContents,
@@ -25,6 +36,13 @@ export function encryptCache(
   return aesGcmEncrypt(usk, utf8ToBytes(JSON.stringify(cache)));
 }
 
+/**
+ * Decrypt cache contents from a stored envelope.
+ * @param usk - The User Symmetric Key.
+ * @param envelope - The stored cache envelope.
+ * @returns The decrypted cache contents.
+ * @throws If the envelope does not decrypt or the payload is not a valid cache.
+ */
 export async function decryptCache(
   usk: Uint8Array,
   envelope: Envelope,
@@ -37,6 +55,13 @@ export async function decryptCache(
   return parsed;
 }
 
+/**
+ * Load and decrypt the cache file, or return an empty cache if it does not exist.
+ * @param home - The ZuulPass home directory.
+ * @param usk - The User Symmetric Key.
+ * @returns The decrypted cache contents.
+ * @throws If the cache file exists but cannot be read, decrypted, or parsed.
+ */
 export async function loadCache(
   home: string,
   usk: Uint8Array,
@@ -51,6 +76,12 @@ export async function loadCache(
   return decryptCache(usk, JSON.parse(raw) as Envelope);
 }
 
+/**
+ * Encrypt and write the cache file with owner-only permissions.
+ * @param home - The ZuulPass home directory.
+ * @param usk - The User Symmetric Key.
+ * @param cache - The cache contents to persist.
+ */
 export async function saveCache(
   home: string,
   usk: Uint8Array,

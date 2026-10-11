@@ -28,6 +28,19 @@ packages/
 - Deployment: **Wrangler** (local dev `wrangler dev`, D1 migrations, `secret put` for the server pepper).
 - CLI crypto and data models must not depend on UI libraries; `core` stays headless.
 
+## Comments & documentation
+
+- Use JSDoc block comments (`/** ... */`) for multi-line comments. Do **not**
+  stack `//` line comments to write multi-line prose; reserve `//` for short,
+  single-line clarifications.
+- Every public (exported) class, interface, type, and method/function must have a
+  JSDoc comment describing what it is or does.
+- For methods and functions, document inputs and outputs in a basic way: an
+  `@param` per parameter and `@returns` for the return value (omit `@returns`
+  for `void`).
+- Document failure modes with `@throws` when a call can raise (or reject / return
+  an error) under conditions the caller is expected to handle.
+
 ## Handoff discipline (IMPORTANT)
 
 1. At the **start** of a work session, read `docs/architecture.md` and `STATUS.md`.

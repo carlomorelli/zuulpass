@@ -3,10 +3,11 @@ import type { Env, Variables } from "./env.js";
 import { sha256Hex } from "./crypto.js";
 import { errorBody } from "./http.js";
 
-// Sliding expiry with an absolute cap (docs/architecture.md §4).
+/** Sliding expiry with an absolute cap (docs/architecture.md §4). */
 export const SESSION_SLIDING_MS = 30 * 60 * 1000;
 export const SESSION_ABSOLUTE_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Subset of a session row needed for auth checks. */
 interface SessionRow {
   id: string;
   user_id: string;
@@ -14,7 +15,12 @@ interface SessionRow {
   absolute_expires_at: number;
 }
 
-// Server stores only SHA-256(token); the raw token never touches the DB.
+/**
+ * Hash a bearer token from an `Authorization` header. The server stores only
+ * SHA-256(token); the raw token never touches the DB.
+ * @param header - The raw `Authorization` header value, if any.
+ * @returns The hex SHA-256 of the token, or `null` if malformed or absent.
+ */
 export async function tokenHashFromHeader(
   header: string | undefined,
 ): Promise<string | null> {
@@ -24,6 +30,10 @@ export async function tokenHashFromHeader(
   return sha256Hex(token);
 }
 
+/**
+ * Hono middleware that resolves and validates the session token, sliding its
+ * expiry forward, and exposes `userId`/`sessionId` on the context.
+ */
 export const requireAuth = createMiddleware<{
   Bindings: Env;
   Variables: Variables;

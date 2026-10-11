@@ -1,7 +1,9 @@
 import { z } from "zod";
 
-// A vault item as stored/served by the worker. Only routing/versioning metadata
-// is plaintext; the payload itself is opaque ciphertext (base64).
+/**
+ * A vault item as stored/served by the worker. Only routing/versioning metadata
+ * is plaintext; the payload itself is opaque ciphertext (base64).
+ */
 export const vaultItemSchema = z.object({
   id: z.string().min(1).max(64),
   revision: z.number().int().nonnegative(),
@@ -10,7 +12,7 @@ export const vaultItemSchema = z.object({
   ciphertext: z.string().base64(),
 });
 
-// Opaque cursor: the server timestamp to resume incremental sync from.
+/** Opaque cursor: the server timestamp to resume incremental sync from. */
 export const syncCursorSchema = z.number().int();
 
 export const vaultPullResponseSchema = z.object({
@@ -18,8 +20,10 @@ export const vaultPullResponseSchema = z.object({
   cursor: syncCursorSchema,
 });
 
-// Clients send the last revision they saw; the server bumps `revision` and
-// applies last-write-wins (docs/architecture.md §7).
+/**
+ * Clients send the last revision they saw; the server bumps `revision` and
+ * applies last-write-wins (docs/architecture.md §7).
+ */
 export const vaultPutRequestSchema = z.object({
   id: z.string().min(1).max(64),
   baseRevision: z.number().int().nonnegative(),
@@ -30,14 +34,23 @@ export const vaultDeleteRequestSchema = z.object({
   baseRevision: z.number().int().nonnegative(),
 });
 
-// Result of a successful write.
+/** Result of a successful write. */
 export const vaultWriteResponseSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.number().int(),
 });
 
+/** A vault item as stored/served by the worker. */
 export type VaultItem = z.infer<typeof vaultItemSchema>;
+
+/** Response body of the incremental vault pull. */
 export type VaultPullResponse = z.infer<typeof vaultPullResponseSchema>;
+
+/** Request body for upserting a vault item. */
 export type VaultPutRequest = z.infer<typeof vaultPutRequestSchema>;
+
+/** Request body for deleting a vault item. */
 export type VaultDeleteRequest = z.infer<typeof vaultDeleteRequestSchema>;
+
+/** Response body of a successful vault write. */
 export type VaultWriteResponse = z.infer<typeof vaultWriteResponseSchema>;

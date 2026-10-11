@@ -1,7 +1,9 @@
 import { z } from "zod";
 
-// Versioned KDF parameters. `kdf` is an enum so Argon2id can be added later
-// without breaking old accounts (see docs/architecture.md §3).
+/**
+ * Versioned KDF parameters. `kdf` is an enum so Argon2id can be added later
+ * without breaking old accounts (see docs/architecture.md §3).
+ */
 export const kdfKindSchema = z.enum(["pbkdf2"]);
 
 export const kdfParamsSchema = z.object({
@@ -20,6 +22,11 @@ export const paramsResponseSchema = z.object({
   recoverySalt: z.string().base64(),
 });
 
+/** Supported key-derivation function family. */
 export type KdfKind = z.infer<typeof kdfKindSchema>;
+
+/** Versioned KDF parameters carried on the wire. */
 export type KdfParams = z.infer<typeof kdfParamsSchema>;
+
+/** Response body of `GET /params`: KDF params plus the per-user recovery salt. */
 export type ParamsResponse = z.infer<typeof paramsResponseSchema>;
