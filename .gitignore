@@ -7,6 +7,6 @@ coverage/
 .env.*
 !.env.example
 .wrangler/
-.dev.vars
+.dev.vars*
 .test.toml
 .DS_Store

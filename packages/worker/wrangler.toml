@@ -2,14 +2,18 @@ name = "zuulpass"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "zuulpass"
-# Placeholder id: only used by `wrangler dev --local`. Replace with the real D1
-# id from `wrangler d1 create zuulpass` before deploying.
-database_id = "00000000-0000-0000-0000-000000000000"
+[env.dev]
 
-[vars]
-# Dev-only pepper for the server-side auth verifier. In production set this via
-# `wrangler secret put PEPPER` and remove this entry.
-PEPPER = "dev-pepper-do-not-use-in-prod"
+    [[env.dev.d1_databases]]
+    binding = "DB"
+    database_name = "zuulpass-dev"
+    database_id = "e6e34964-149a-4fd0-b498-e184d7132893"
+
+[env.prod]
+
+    [[env.prod.d1_databases]]
+    binding = "DB"
+    database_name = "zuulpass-prod"
+    database_id = "34af6b8e-3fff-477c-9170-d58e393f406c"
+
+
