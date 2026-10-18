@@ -67,7 +67,9 @@ async function readStdin(): Promise<string> {
 }
 
 async function readMasterPassword(opts: CommonOptions): Promise<string> {
-  if (opts.passwordStdin) return readStdin();
+  if (opts.passwordStdin) {
+    return readStdin();
+  }
   return passwordPrompt({ message: "Master password", mask: true });
 }
 
@@ -208,7 +210,9 @@ program
     runAction(async () => {
       const home = zuulpassHome();
       const config = await loadConfig(home);
-      if (!config) fail("no account configured — run `zuulp init` first");
+      if (!config) {
+        fail("no account configured — run `zuulp init` first");
+      }
       const masterPassword = await readMasterPassword(opts);
       const session = await unlock({
         serverUrl: config.serverUrl,
@@ -267,7 +271,9 @@ program
     runAction(async () => {
       const home = zuulpassHome();
       const config = await loadConfig(home);
-      if (!config) fail("no account configured — run `zuulp init` first");
+      if (!config) {
+        fail("no account configured — run `zuulp init` first");
+      }
       const masterPassword = await readMasterPassword(opts);
       const session = await unlock({
         serverUrl: config.serverUrl,

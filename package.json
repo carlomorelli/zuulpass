@@ -12,6 +12,7 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
+    "integration-test": "pnpm --filter @zuulpass/integration-tests test",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

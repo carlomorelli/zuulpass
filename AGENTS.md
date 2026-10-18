@@ -41,6 +41,12 @@ packages/
 - Document failure modes with `@throws` when a call can raise (or reject / return
   an error) under conditions the caller is expected to handle.
 
+## Code style
+
+- **Always use curly braces for control-flow bodies** (`if`, `else`, `for`,
+  `while`, `do`). Do not write brace-less one-liners such as
+  `if (ok) return value;` — write the block form instead, for readability.
+
 ## Handoff discipline (IMPORTANT)
 
 1. At the **start** of a work session, read `docs/architecture.md` and `STATUS.md`.
@@ -48,8 +54,8 @@ packages/
    note the current phase, and record any open decisions or gotchas so the next
    session (or a fresh one) can resume without re-deriving context.
 3. Keep `docs/architecture.md` in sync with any design drift during implementation.
-4. Commit at each milestone. Do not commit secrets (the D1 pepper must go through
-   `wrangler secrets`, never the repo).
+4. **NEVER commit changes autonomously.** Do not run `git commit` unless the user explicitly asks you to commit. Always pause for confirmation before creating a commit. Do not commit secrets (the D1 pepper must go through `wrangler secrets`, never the repo).
+5. If you create or modify files, show the proposed changes and wait for user approval before committing them.
 
 ## Verification gate (IMPORTANT)
 

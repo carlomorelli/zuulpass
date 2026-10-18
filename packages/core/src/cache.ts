@@ -70,7 +70,9 @@ export async function loadCache(
   try {
     raw = await readFile(join(home, CACHE_FILE), "utf8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return emptyCache();
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return emptyCache();
+    }
     throw err;
   }
   return decryptCache(usk, JSON.parse(raw) as Envelope);

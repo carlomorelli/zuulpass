@@ -30,7 +30,9 @@ export const CACHE_FILE = "cache.enc";
  */
 export function zuulpassHome(env: NodeJS.ProcessEnv = process.env): string {
   const override = env.ZUULPASS_HOME?.trim();
-  if (override) return override;
+  if (override) {
+    return override;
+  }
   if (process.platform === "win32") {
     return join(
       env.APPDATA ?? join(homedir(), "AppData", "Roaming"),
@@ -44,7 +46,9 @@ async function readJson<T>(path: string): Promise<T | null> {
   try {
     return JSON.parse(await readFile(path, "utf8")) as T;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
     throw err;
   }
 }

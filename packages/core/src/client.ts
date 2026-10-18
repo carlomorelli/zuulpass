@@ -65,7 +65,9 @@ async function toApiError(res: Response): Promise<ApiError> {
 }
 
 async function ensureOk(res: Response): Promise<Response> {
-  if (!res.ok) throw await toApiError(res);
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
   return res;
 }
 
@@ -74,8 +76,12 @@ function requestHeaders(
   withBody = false,
 ): Record<string, string> {
   const headers: Record<string, string> = {};
-  if (withBody) headers["content-type"] = "application/json";
-  if (token) headers.authorization = `Bearer ${token}`;
+  if (withBody) {
+    headers["content-type"] = "application/json";
+  }
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
   return headers;
 }
 

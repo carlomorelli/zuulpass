@@ -200,7 +200,9 @@ function headers(token: string): Record<string, string> {
  */
 function firstOf<T>(arr: T[]): T {
   const value = arr[0];
-  if (value === undefined) throw new Error("expected a non-empty array");
+  if (value === undefined) {
+    throw new Error("expected a non-empty array");
+  }
   return value;
 }
 

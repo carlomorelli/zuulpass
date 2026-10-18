@@ -24,9 +24,13 @@ interface SessionRow {
 export async function tokenHashFromHeader(
   header: string | undefined,
 ): Promise<string | null> {
-  if (!header?.startsWith("Bearer ")) return null;
+  if (!header?.startsWith("Bearer ")) {
+    return null;
+  }
   const token = header.slice("Bearer ".length).trim();
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
   return sha256Hex(token);
 }
 

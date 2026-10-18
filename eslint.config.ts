@@ -16,6 +16,8 @@ export default defineConfig(
   tseslint.configs.recommended,
   {
     rules: {
+      // Always require braces around control-flow bodies (see AGENTS.md).
+      curly: ["error", "all"],
       // Allow `_`-prefixed unused params (e.g. Worker fetch(request)).
       "@typescript-eslint/no-unused-vars": [
         "error",
