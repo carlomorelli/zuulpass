@@ -73,8 +73,9 @@ vault_items(
 -- indexes: users(email), sessions(token_hash), vault_items(user_id, updated_at)
 ```
 
-> The login-session slice ships `users` + `sessions` tables; `vault_items` and its
-> index are created by the vault/sync migration (next phase).
+> `users` + `sessions` shipped with the login-session slice; `vault_items` and
+> its `(user_id, updated_at)` index ship with the vault/sync slice (migration
+> `0002_vault.sql`).
 
 **Encrypted payload (decrypted view):**
 
@@ -107,16 +108,18 @@ POST   /account/register       -> 201
 GET    /account/keys           -> { protectedUsk }                       (Bearer; wrapped USK for local unlock)
 POST   /account/change-master-password { newProtectedUSK, newAuthHash, newKdfParams }
 POST   /account/recover        { recoveryAuth, newProtectedUSK, newAuthHash, newKdfParams }
-GET    /vault?since=<ts>       -> { items:[...], cursor }                (deferred)
-POST   /vault/items            { id, baseRevision, ciphertext }         (LWW, deferred)
-DELETE /vault/items/:id        { baseRevision }                         (tombstone, deferred)
+GET    /vault?since=<ts>       -> { items:[...], cursor }
+POST   /vault/items            { id, baseRevision, ciphertext }         (LWW)
+DELETE /vault/items/:id        { baseRevision }                         (tombstone)
 ```
 
 > Design note (login-session slice): clients must fetch `protected_usk` to
 > unlock their local cache, so `GET /account/keys` was added to the original
 > list. `POST /login` carries `email` so the server can route the login
-> (`auth_verifier` lookup). Vault CRUD/sync endpoints are not implemented yet;
-> `add`/`ls` currently keep items in the local encrypted cache only.
+> (`auth_verifier` lookup). Vault CRUD/sync endpoints are implemented
+> (`0002_vault.sql`, LWW upserts + tombstones); the CLI does not use them yet —
+> the `core` sync engine (phase 4) is still pending, so `add`/`ls` keep items in
+> the local encrypted cache only.
 
 Implemented with **Hono**, **Zod** schemas in `api-types`, and **`hono/client`**
 for an end-to-end typed client.

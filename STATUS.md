@@ -23,13 +23,20 @@ Node CLI client. Full design: [`docs/architecture.md`](docs/architecture.md).
 
 ## Current phase
 
-Phase 3 — `core` crypto. **Done.** Login-session slice shipped (phases 4/5/6
-partial): a real register/login/session path against the Worker plus
-`zuulp init / add / ls` on a local USK-encrypted cache (`cache.enc`).
+Phase 5 (worker vault slice) — **server-side done**. The plan's 4/5 order was
+deliberately flipped: the vault routes were built first so the sync engine can be
+developed against a real, runnable target (see "Ordering decision" below).
 
-**Next:** Worker vault CRUD + incremental sync (`/vault`, D1 `vault_items`),
-offline cache fallback, and the remaining CLI commands (`get`, `edit`, `rm`,
-`gen`, `change-master-password`, `recover`).
+Shipped in this slice: migration `0002_vault.sql` (`vault_items`) plus
+`GET /vault?since=`, `POST /vault/items`, `DELETE /vault/items/:id` (LWW upserts,
+tombstones, incremental cursor) behind `requireAuth`. Hand-verified end-to-end
+against `wrangler dev` + local D1 (register → login → insert → LWW bump →
+tombstone → pull → 401).
+
+**Next:** phase 4 — `core` sync engine: `sync.json` cursor, vault API client
+methods (`vault.ts` schemas already exist), `LocalVaultItem` sync metadata
+(revision/updatedAt/deleted), pull-merge-LWW, write-through, offline read
+fallback, and the headless `VaultService`. Then phase 6 CLI commands.
 
 ## Completed so far
 
@@ -60,6 +67,13 @@ offline cache fallback, and the remaining CLI commands (`get`, `edit`, `rm`,
   - `ci.yml` — on every push (all branches) / PR / manual: checkout → pnpm (`packageManager`) → Node 24 with pnpm cache → `pnpm install --frozen-lockfile` → lint → prettier `--check` → typecheck → test → `wrangler deploy --dry-run --env dev` (bundle/config sanity, no auth).
   - `deploy.yml` — on push to `main` / manual: `verify` → `deploy-dev` → `deploy-prod`. Each deploy job declares its GitHub environment (`dev` / `prod`, which selects the `PEPPER` secret) and applies D1 migrations (`wrangler d1 migrations apply zuulpass-<env> --remote --env <env>`), then deploys (`wrangler deploy --env <env>`), then sets the worker secret (`printf '%s' "$PEPPER" | wrangler secret put PEPPER --env <env>`). Cloudflare auth via repo secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`; `WRANGLER_SEND_METRICS=false`; deploy concurrency does not cancel in progress.
   - `wrangler.toml` split into `[env.dev]` / `[env.prod]` with their own D1 bindings; worker names default to `zuulpass-dev` / `zuulpass-prod` (no explicit `name`). Both envs verified with `wrangler deploy --dry-run`. Both workflow files validated as YAML.
+- **Phase 5 vault slice done (89 tests total):**
+  - `worker`: migration `0002_vault.sql` — `vault_items(id, user_id, revision, updated_at, deleted, ciphertext)` with `PRIMARY KEY (user_id, id)` + index `idx_vault_items_user_updated(user_id, updated_at)`.
+  - `worker/src/vault.ts`: `registerVaultRoutes(app)` wires `GET /vault?since=`, `POST /vault/items`, `DELETE /vault/items/:id` (all behind `requireAuth`). LWW upsert accepts a stale `baseRevision` and always bumps `revision`; writing over a tombstone resurrects the item; delete is an idempotent tombstone (no-op for an absent/already-deleted row); pull returns items with `updated_at > since`, oldest first, `LIMIT PULL_PAGE_SIZE` (500), cursor = last item's `updated_at`.
+  - Per-user `updated_at` is **strictly increasing**: each write takes `max(Date.now(), MAX(updated_at for user) + 1)`, which makes the `>` cursor tie-free (see gotchas).
+  - `worker/src/http.ts`: `readJson` moved here (shared with `index.ts`); added exported `JsonRequest` type.
+  - Tests: `worker/src/vault.test.ts` (12) with a small in-memory fake D1 — auth/401, `since` validation, insert/LWW bump/resurrect, per-user scoping, tombstone + idempotency, absent-item delete, cursor advance/exclusion.
+  - Hand-verified E2E against `wrangler dev --env dev` + local D1: register → login → insert (rev 1) → stale-base put (rev 2, ciphertext replaced) → delete (rev 3 tombstone) → pull (`deleted: true`) → 401 without token.
 
 ## Key conventions / locked decisions (short version)
 
@@ -72,6 +86,12 @@ offline cache fallback, and the remaining CLI commands (`get`, `edit`, `rm`,
 - Important crypto costs are client-side; Worker stays I/O-bound (respects 10 ms CPU limit).
 
 ## Open items / gotchas
+
+- **Ordering decision (phase 5 vault slice before finishing phase 4):** the sync engine's semantics (revision bump, cursor, tombstones, LWW) are defined by the server, and routes are the only part that can be run by hand, so the vault routes were built and smoke-tested first; phase 4 (core sync) now targets a real local worker. Rejected the strict 4→5 plan order for MVP testability.
+- **Vault cursor semantics:** `updated_at` is strictly increasing per user (write takes `max(now, user's MAX(updated_at)+1)`); the pull uses `updated_at > since`, cursor = last returned item's `updated_at` (or `since` for an empty page). Residual edge: two truly concurrent writes can read the same `MAX` and land the same `updated_at` — only harmful if a 500-row page boundary falls exactly between them (accepted for MVP). Two statements per write (`SELECT MAX` + write); watch the 50-queries-per-invocation guard.
+- **Worker tests use an in-memory fake D1** (`packages/worker/src/vault.test.ts`), keyed to our exact SQL — it is a route-logic harness, not a D1 conformance test. `@cloudflare/vitest-pool-workers` (the documented worker test path, `docs/architecture.md` §10) is still not wired; deferred to phase 7 (integration tests). Vitest is currently 5.x, and pool-workers compatibility with it is unverified.
+- **Local dev now needs `--env dev`:** bindings live only under `[env.dev]`/`[env.prod]` (no top-level D1). Use `wrangler dev --env dev` and `wrangler d1 migrations apply DB --local --env dev` (binding `DB`, not the database name). `PEPPER` is read from `packages/worker/.dev.vars`. Migration `0002_vault.sql` is applied locally; remote dev/prod apply it via the deploy workflow on the next `main` push.
+- **`vault_items` id is client-generated** (uuid), scoped by `PRIMARY KEY (user_id, id)`; deleting an id with no server row succeeds without inserting a tombstone (no other device could hold it).
 
 - **pnpm 12 build scripts:** dependency install scripts are blocked by default; allow-listed via `allowBuilds` in `pnpm-workspace.yaml` (`esbuild: true`, `workerd: true`, `sharp: false`). Add new entries there if future deps need install scripts.
 - **Vitest root:** `vitest.config.ts` pins `test.root` to the repo root with include `packages/**/*.test.ts`, so tests are discoverable regardless of the cwd a package runs from.

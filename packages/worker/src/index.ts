@@ -17,7 +17,8 @@ import {
   sha256Hex,
   timingSafeEqual,
 } from "./crypto.js";
-import { errorBody, normalizeEmail } from "./http.js";
+import { errorBody, normalizeEmail, readJson } from "./http.js";
+import { registerVaultRoutes } from "./vault.js";
 
 // Decoy KDF parameters must mirror what `core.generateKdfParams()` produces.
 const DEFAULT_ITERATIONS = 600_000;
@@ -29,14 +30,6 @@ interface UserRow {
 }
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
-
-async function readJson(c: { req: { json: () => Promise<unknown> } }) {
-  try {
-    return await c.req.json();
-  } catch {
-    return undefined;
-  }
-}
 
 app.get("/health", (c) => c.json({ ok: true, service: "zuulpass" }));
 
@@ -187,6 +180,8 @@ app.get("/account/keys", requireAuth, async (c) => {
     }),
   );
 });
+
+registerVaultRoutes(app);
 
 app.notFound((c) => c.json(errorBody("not_found", "not found"), 404));
 
